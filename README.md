@@ -1,5 +1,5 @@
 # learn-rust
-Some small, easy rust projects for learning the language
+Some small, easy rust projects for becoming familiar with the Rust language
 
 ## bootstrap
 A program that simulates a specified linear regression model (with one variable) based on parameters passed. Based on assignments for an advanced statistical computing course at https://www.biostat.wisc.edu/~kbroman/teaching/statcomp/index.html
