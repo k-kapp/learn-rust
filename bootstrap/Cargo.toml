@@ -1,0 +1,12 @@
+[package]
+name = "bootstrap"
+version = "0.1.0"
+authors = ["kkapp <konrad.p.kapp@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.7"
+criterion-plot = "0.4.2"
+itertools-num = "0.1.1"
