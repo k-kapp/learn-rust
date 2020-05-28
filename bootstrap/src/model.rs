@@ -81,4 +81,33 @@ impl model
     {
         (x, self.beta0 + self.beta1 * x)
     }
+
+    pub fn estimate_simple(&self, xdata: &Vec::<f32>, ydata: &Vec::<f32>) -> (f32, f32)
+    {
+        let mut xmean: f32 = 0.0f32;
+        let mut ymean: f32 = 0.0f32;
+
+        let xyiter = xdata.iter().zip(ydata.iter());
+        let xyiter2 = xyiter.clone();
+        
+        for (x, y) in xyiter
+        {
+            xmean += x;
+            ymean += y;
+        }
+
+        xmean /= (xdata.len() as u32 as f32); 
+        ymean /= (xdata.len() as u32 as f32);
+
+        let mut b0_est: f32 = 0.0f32;
+        let mut b1_est: f32 = 0.0f32;
+        
+        for (x, y) in xyiter2
+        {
+            b1_est += (x - xmean) * (y - ymean) / ((x - xmean) * (x - xmean));
+        }
+        b0_est = ymean - b1_est * xmean;
+
+        (b0_est, b1_est)
+    }
 }

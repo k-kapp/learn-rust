@@ -1,8 +1,24 @@
 mod model;
+mod csv_reader;
+mod dataframe;
 use criterion_plot::prelude::*;
 
+fn plotdata(xs: &Vec::<f32>, ys: &Vec::<f32>, yspredict: &Vec::<f32>)
+{
+    Figure::new().plot(
+        Points { x: xs, y: ys },
+        |lp| {
+            lp.set(Color::Red)
+        }).
+        plot(
+        Lines { x: xs, y: yspredict},
+        |lp| {
+            lp.set(Color::Blue)
+        })
+        .draw().unwrap();
+}
+
 fn main() {
-    println!("Hello, world!");
     let m = model::model::new(1.0, 1.0, 1.0, 1.0, 1.0);
     let tup = m.simulate(1000);
     let mut xs = tup.0;
@@ -14,17 +30,11 @@ fn main() {
         println!("{}, {}", xs[i], ys[i]);
     }
 
-    Figure::new().plot(
-        Points { x: &xs, y: &ys },
-        |lp| {
-            lp.set(Color::Red)
-        }).
-        plot(
-        Lines { x: &xs, y: &yspredict},
-        |lp| {
-            lp.set(Color::Blue)
-        })
-        .draw().unwrap();
+    let df = csv_reader::read_csv("/home/konrad/dummy.csv");
+
+    println!("Dataframe:");
+    println!("{}", df);
+
 
     /*
     Figure::new()
