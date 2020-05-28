@@ -20,7 +20,7 @@ fn plotdata(xs: &Vec::<f32>, ys: &Vec::<f32>, yspredict: &Vec::<f32>)
 
 fn main() {
     let m = model::model::new(1.0, 1.0, 1.0, 1.0, 1.0);
-    let tup = m.simulate(1000);
+    let tup = m.simulate(1000, 0.0, 100.0).unwrap();
     let mut xs = tup.0;
     let mut ys = tup.1;
     let mut yspredict = m.predict_vals(&xs);
@@ -39,8 +39,31 @@ fn main() {
     let dfy = df.getcoli_float(1).unwrap();
 
     let model = model::model_est::new(&dfx, &dfy);
+    let dpredicts = model.get_predictions();
+
+    //plotdata(&dfx, &dfy, &dpredicts);
 
     model.report_basic();
+
+    let xmin = dfx.clone().iter().fold(std::f32::MAX, |a, e| if e < &a { *e } else { a } );
+    let xmax = dfx.clone().iter().fold(-std::f32::MAX, |a, e| if e > &a { *e } else { a } );
+    let nelements = dfx.len();
+
+    println!("Minimum, maximum x: {}, {}", xmin, xmax);
+    println!("Number of elements: {}", nelements);
+
+    let xys_sim = model.simulate_parametric((nelements * 1) as u64, xmin, xmax).unwrap();
+
+    let model_simulated = model::model_est::new(&xys_sim.0, &xys_sim.1);
+    let simpredicts = model_simulated.get_predictions();
+
+    model_simulated.report_basic();
+
+    plotdata(&xys_sim.0, &xys_sim.1, &simpredicts);
+
+    let xys_sim_nonp = model.simulate_nonparam_pairs(nelements as u64).unwrap();
+
+    let model_nonparam = model::model_est::new(&xys_sim_nonp.0, &xys_sim_nonp.1);
 
     /*
     Figure::new()

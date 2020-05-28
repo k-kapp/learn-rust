@@ -109,6 +109,11 @@ impl model_est
         self.compute_resids();
         self.beta0_se = (self.resid_se * self.resid_se * (1f32 / (self.xdata.len() as f32) + self.xmean * self.xmean / self.ssex)).sqrt();
         self.beta1_se = (self.resid_se * self.resid_se / self.ssex).sqrt();
+
+        let mut beta0 = 0.0f32;
+        let mut beta1 = 0.0f32;
+        self.params.get_betas(&mut beta0, &mut beta1);
+        self.params = model::new(beta0, beta1, self.resid_se, 0.0f32, 0.0f32);       // update with new params, containing additional residual SE
     }
 
     fn compute_resids(&mut self) {
@@ -122,12 +127,35 @@ impl model_est
         self.resid_se = (sqsum / ((self.ydata.len() as f32 - 1.0f32) as f32)).sqrt();
     }
 
+    pub fn get_predictions(&self) -> Vec::<f32> {
+        self.params.predict_vals(&self.xdata)
+    }
+
     pub fn report_basic(&self) {
         let mut beta0: f32 = 0.0f32;
         let mut beta1: f32 = 0.0f32;
         self.params.get_betas(&mut beta0, &mut beta1);
         println!("beta0: {}, beta1: {}", beta0, beta1);
         println!("beta0_se: {}, beta1_se: {}", self.beta0_se, self.beta1_se);
+    }
+
+    pub fn simulate_parametric(&self, n: u64, start: f32, stop: f32) -> Result<(Vec::<f32>, Vec::<f32>), String> {
+        self.params.simulate(n, start, stop)
+    }
+
+    pub fn simulate_nonparam_pairs(&self, n: u64) -> Result<(Vec::<f32>, Vec::<f32>), String> {
+        let mut rng = rand::thread_rng();
+        let uniform = rand::distributions::Uniform::new(0 as u32, self.xdata.len() as u32);
+        let mut sxs = Vec::<f32>::new();
+        let mut sys = Vec::<f32>::new();
+
+        for i in 0..n {
+            let ridx = uniform.sample(&mut rng);
+            sxs.push(self.xdata[ridx as usize]);
+            sys.push(self.ydata[ridx as usize]);
+        }
+
+        Ok((sxs, sys))
     }
 }
 
@@ -143,27 +171,33 @@ impl model
             normal: rand::distributions::Normal::new(0.0f64, 1.0f64)}
     }
 
-    pub fn evaluate(&self, rng: &mut rand::rngs::ThreadRng) -> (f32, f32)
+    fn evaluate(&self, rng: &mut rand::rngs::ThreadRng, start: f32, stop: f32) -> (f32, f32)
     {
-        let x = rng.gen::<f32>() * 10.0f32;
-        let e = self.normal.sample(rng) as f32;
+        let range = stop - start;
+        let x = rng.gen::<f32>() * range + start;
+        let e = (self.normal.sample(rng) as f32) * self.sigma;
         (x, self.beta0 + self.beta1 * x + e)
     }
 
-    pub fn simulate(&self, n: u64) -> (Vec::<f32>, Vec::<f32>)
+    pub fn simulate(&self, n: u64, start: f32, stop: f32) -> Result<(Vec::<f32>, Vec::<f32>), String>
     {
         let mut vec = Vec::<(f32, f32)>::new();
         let mut rng = rand::thread_rng();
 
+        if stop <= start
+        {
+            return Err("Invalid range given for start, stop in model::simulate".to_string());
+        }
+
         for i in 0..n
         {
-            vec.push(self.evaluate(&mut rng))
+            vec.push(self.evaluate(&mut rng, start, stop))
         }
 
         //let mut xy: Vec<(f32, f32)> = xs.iter().map(|&x| x).zip(vec.iter().map(|&y| y)).collect();        // when I still created this with two separate vecs, xs and ys
 
         vec.sort_by(|xy1, xy2| xy1.0.partial_cmp(&xy2.0).unwrap());
-        vec.iter().map(|&(a, b)| (a, b)).unzip()
+        Ok(vec.iter().map(|&(a, b)| (a, b)).unzip())
         //vec.iter().unzip()
     }
 
