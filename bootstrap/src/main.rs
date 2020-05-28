@@ -30,11 +30,17 @@ fn main() {
         println!("{}, {}", xs[i], ys[i]);
     }
 
-    let df = csv_reader::read_csv("/home/konrad/dummy.csv");
+    let df = csv_reader::read_csv("/home/konrad/rust/bootstrap/data1.csv");
 
     println!("Dataframe:");
     println!("{}", df);
 
+    let dfx = df.getcoli_float(0).unwrap();
+    let dfy = df.getcoli_float(1).unwrap();
+
+    let model = model::model_est::new(&dfx, &dfy);
+
+    model.report_basic();
 
     /*
     Figure::new()

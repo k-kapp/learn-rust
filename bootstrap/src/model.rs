@@ -13,6 +13,124 @@ pub struct model
     normal: rand::distributions::Normal
 }
 
+pub struct model_est
+{
+    params: model,
+    xdata: Vec::<f32>,
+    ydata: Vec::<f32>,
+    ypred: Vec::<f32>,
+    resids: Vec::<f32>,
+    resid_se: f32,
+    beta0_se: f32,
+    beta1_se: f32,
+    ssex: f32,
+    ssey: f32,
+    ssexy: f32,
+    xmean: f32,
+    ymean: f32
+}
+
+impl model_est
+{
+    pub fn new(xdata: &Vec::<f32>, ydata: &Vec::<f32>) -> model_est {
+        let mut ret_model = model_est {
+            params: model::new(0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32),
+            xdata: xdata.to_vec(),
+            ydata: ydata.to_vec(),
+            ypred: Vec::<f32>::new(),
+            resids: Vec::<f32>::new(),
+            resid_se: 0.0f32,
+            beta0_se: 0.0f32,
+            beta1_se: 0.0f32,
+            ssex:     0.0f32,
+            ssey:     0.0f32,
+            ssexy:    0.0f32,
+            xmean:    0.0f32,
+            ymean:    0.0f32
+        };
+
+        ret_model.estimate_all();
+
+        ret_model
+    }
+
+    fn estimate(&mut self) -> Result<(), String> {
+        if self.xdata.len() != self.ydata.len()
+        {
+            return Err("X data must be of same length as Y data in estimate_simple".to_string());
+        }
+        if self.xdata.len() < 3
+        {
+            return Err("Length of data in estimate_simple must be more than 3".to_string());
+        }
+
+        self.xmean = 0.0f32;
+        self.ymean = 0.0f32;
+
+        let xyiter = self.xdata.iter().zip(self.ydata.iter());
+        let xyiter2 = xyiter.clone();
+        
+        for (x, y) in xyiter
+        {
+            self.xmean += x;
+            self.ymean += y;
+        }
+
+        self.xmean /= (self.xdata.len() as u32 as f32); 
+        self.ymean /= (self.xdata.len() as u32 as f32);
+
+        //let mut b0_est: f32 = 0.0f32;
+        //let mut b1_est: f32 = 0.0f32;
+
+        self.ssex = 0.0f32;
+        self.ssey = 0.0f32;
+        self.ssexy = 0.0f32;
+        
+        for (x, y) in xyiter2
+        {
+            self.ssexy += (x - self.xmean) * (y - self.ymean);
+            //b1_est += (x - xmean) * (y - ymean) / ((x - xmean) * (x - xmean));
+            self.ssex += (x - self.xmean) * (x - self.xmean);
+            self.ssey += (y - self.ymean) * (y - self.ymean);
+        }
+        let b1_est = self.ssexy / self.ssex;
+        let b0_est = self.ymean - b1_est * self.xmean;
+
+        self.params = model::new(b0_est, b1_est, 0.0f32, 0.0f32, 0.0f32);
+
+        //self.beta1_se = ((self.ssey / ((self.xdata.len() - 2) as f32)) / self.ssex).sqrt();
+
+        Ok(())
+    }
+
+    pub fn estimate_all(&mut self) {
+        self.estimate();
+        self.ypred = self.params.predict_vals(&self.xdata);
+        self.compute_resids();
+        self.beta0_se = (self.resid_se * self.resid_se * (1f32 / (self.xdata.len() as f32) + self.xmean * self.xmean / self.ssex)).sqrt();
+        self.beta1_se = (self.resid_se * self.resid_se / self.ssex).sqrt();
+    }
+
+    fn compute_resids(&mut self) {
+        self.resids.clear();
+        let mut sqsum = 0.0f32;
+        for (yo, yp) in self.ydata.iter().zip(self.ypred.iter()) {
+            self.resids.push(yp - yo);
+            sqsum += (yp - yo) * (yp - yo);
+        }
+
+        self.resid_se = (sqsum / ((self.ydata.len() as f32 - 1.0f32) as f32)).sqrt();
+    }
+
+    pub fn report_basic(&self) {
+        let mut beta0: f32 = 0.0f32;
+        let mut beta1: f32 = 0.0f32;
+        self.params.get_betas(&mut beta0, &mut beta1);
+        println!("beta0: {}, beta1: {}", beta0, beta1);
+        println!("beta0_se: {}, beta1_se: {}", self.beta0_se, self.beta1_se);
+    }
+}
+
 impl model
 {
     pub fn new(beta0: f32, beta1: f32, sigma: f32, gamma: f32, lambda: f32) -> model
@@ -82,32 +200,9 @@ impl model
         (x, self.beta0 + self.beta1 * x)
     }
 
-    pub fn estimate_simple(&self, xdata: &Vec::<f32>, ydata: &Vec::<f32>) -> (f32, f32)
-    {
-        let mut xmean: f32 = 0.0f32;
-        let mut ymean: f32 = 0.0f32;
-
-        let xyiter = xdata.iter().zip(ydata.iter());
-        let xyiter2 = xyiter.clone();
-        
-        for (x, y) in xyiter
-        {
-            xmean += x;
-            ymean += y;
-        }
-
-        xmean /= (xdata.len() as u32 as f32); 
-        ymean /= (xdata.len() as u32 as f32);
-
-        let mut b0_est: f32 = 0.0f32;
-        let mut b1_est: f32 = 0.0f32;
-        
-        for (x, y) in xyiter2
-        {
-            b1_est += (x - xmean) * (y - ymean) / ((x - xmean) * (x - xmean));
-        }
-        b0_est = ymean - b1_est * xmean;
-
-        (b0_est, b1_est)
+    pub fn get_betas(&self, beta0: &mut f32, beta1: &mut f32) {
+        *beta0 = self.beta0;
+        *beta1 = self.beta1;
     }
+
 }

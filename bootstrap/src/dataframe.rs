@@ -100,6 +100,27 @@ impl DataFrame
 
         Ok(())
     }
+
+    pub fn getcoli_float(&self, colidx: u32) -> Result<Vec::<f32>, String> {
+        if self.coltypes.len() <= (colidx as usize)
+        {
+            return Err(format!("colidx out of range for {} columns", self.coltypes.len()).to_string());
+        }
+        match self.coltypes[colidx as usize] {
+            DfEntry::Float(_) => (),
+            _                 => return Err(format!("Given column index {} does not refer to a floating point column", colidx).to_string())
+        };
+        let mut retvec = Vec::<f32>::new();
+        for row in &self.data {
+            let dfval = &row[colidx as usize];
+            let val = match dfval {
+                DfEntry::Float(v) => *v,
+                _                 => panic!("Invalid value encountered in getcoli_float. This is a programming error, not a user error")
+            };
+            retvec.push(val);
+        }
+        Ok(retvec)
+    }
 }
 
 impl fmt::Display for DataFrame
