@@ -3,6 +3,31 @@ use rand::Rng;
 use rand::distributions::{Normal, Distribution};
 use itertools_num::linspace;
 
+
+fn derive_sim_models_parametric(modl: &model_est, n: u64) -> Vec::<model_est> {
+    let mut simmods = Vec::<model_est>::new();
+    let nelements = modl.get_nelements();
+    let xmin = 0.0f32;
+    let xmax = 0.0f32;
+
+    for i in 0..n {
+        let xys_sim = modl.simulate_parametric(nelements, xmin, xmax).unwrap();
+        simmods.push(model_est::new(&xys_sim.0, &xys_sim.1));
+    }
+    simmods
+}
+
+fn derive_sim_models_nonparametric_pairs(modl: &model_est, n: u64) -> Vec::<model_est> {
+    let mut simmods = Vec::<model_est>::new();
+    let nelements = modl.get_nelements();
+
+    for i in 0..n {
+        let xys_sim = modl.simulate_nonparam_pairs(nelements).unwrap();
+        simmods.push(model_est::new(&xys_sim.0, &xys_sim.1));
+    }
+    simmods
+}
+
 pub struct model
 {
     beta0: f32,
@@ -101,6 +126,15 @@ impl model_est
         //self.beta1_se = ((self.ssey / ((self.xdata.len() - 2) as f32)) / self.ssex).sqrt();
 
         Ok(())
+    }
+
+    pub fn get_nelements(&self) -> u64 {
+        self.xdata.len() as u64
+    }
+
+    pub fn get_xextr(&self, min: &mut f32, max: &mut f32) {
+        *min = self.xdata.clone().iter().fold(std::f32::MAX, |a, e| if e < &a { *e } else { a } );
+        *max = self.xdata.clone().iter().fold(-std::f32::MAX, |a, e| if e > &a { *e } else { a } );
     }
 
     pub fn estimate_all(&mut self) {
