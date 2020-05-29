@@ -1,6 +1,7 @@
 mod model;
 mod csv_reader;
 mod dataframe;
+mod plotter;
 use criterion_plot::prelude::*;
 
 fn plotdata(xs: &Vec::<f32>, ys: &Vec::<f32>, yspredict: &Vec::<f32>)
@@ -64,6 +65,10 @@ fn main() {
     let xys_sim_nonp = model.simulate_nonparam_pairs(nelements as u64).unwrap();
 
     let model_nonparam = model::model_est::new(&xys_sim_nonp.0, &xys_sim_nonp.1);
+
+    let mut pl = plotter::Plotter::new(&xys_sim_nonp.0, &xys_sim_nonp.1);
+
+    pl.show_window_delay(1000);
 
     /*
     Figure::new()
