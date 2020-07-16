@@ -68,7 +68,8 @@ fn main() {
 
     let mut pl = plotter::Plotter::new(&xys_sim_nonp.0, &xys_sim_nonp.1);
 
-    pl.show_window_delay(1000);
+    //pl.show_window_delay(1000);
+    pl.show_points(5000, 10);
 
     /*
     Figure::new()
