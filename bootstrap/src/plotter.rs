@@ -2,6 +2,7 @@ extern crate sdl2;
 
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
+use sdl2::event::{EventPollIterator};
 use std::{thread, time};
 use std::convert::TryInto;
 
@@ -172,10 +173,34 @@ impl<'a> Plotter<'a>
 
         self.video.present_canvas();
 
-        thread::sleep(time::Duration::from_millis(ms.into()));
+        //thread::sleep(time::Duration::from_millis(ms.into()));
+
+        let mut quit = false;
+
+        while !quit
+        {
+            'eventloop: for event in self.video.context.event_pump().unwrap().poll_iter() {
+                use sdl2::event::Event;
+                match event {
+                    Event::KeyDown {keycode, ..} => { match keycode {
+                        Some(keycode) => { match keycode {
+                            sdl2::keyboard::Keycode::Escape => {
+                                quit = true;
+                                break 'eventloop;
+                            },
+                            _   => ()
+                        }},
+                        _ => (),
+                        }},
+                    Event::Quit {..} => { 
+                        quit = true; break 'eventloop; 
+                    },
+                    _ => ()
+                }
+            }
+        }
 
         self.video.hide_canvas();
-
     }
 
 
